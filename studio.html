@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>استوديو الدرس — بثّ الدروس العلمية وتسجيلها</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--bg:#0f1512;--panel:#18211d;--line:#2a3832;--txt:#e9efe9;--mut:#93a39a;--acc:#c9a24b;--red:#d94545}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:Cairo,system-ui,sans-serif;font-size:14px}
+.app{display:grid;grid-template-columns:1fr 370px;gap:14px;padding:14px;min-height:100vh}
+@media(max-width:1000px){.app{grid-template-columns:1fr}}
+header.top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+header.top h1{font-size:20px;margin:0;font-family:Amiri,serif;color:var(--acc)}
+header.top .sp{flex:1}
+.stage{background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--line);position:relative}
+#out{display:block;width:100%;height:auto;aspect-ratio:16/9;cursor:crosshair}
+.rec-badge{position:absolute;top:12px;left:12px;background:var(--red);color:#fff;padding:4px 12px;border-radius:20px;font-weight:700;display:none}
+.rec-badge.on{display:block;animation:bl 1.4s infinite}
+@keyframes bl{50%{opacity:.55}}
+.scenes{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:12px 0}
+@media(max-width:700px){.scenes{grid-template-columns:repeat(4,1fr)}}
+.scenes button{padding:12px 6px;font-size:14px}
+.scenes button.active{background:var(--acc);color:#1b1408;border-color:var(--acc)}
+.scenes kbd{display:block;font-size:11px;opacity:.6}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+.bar .grp{display:flex;gap:6px;align-items:center}
+.bar .sep{width:1px;height:28px;background:var(--line);margin:0 4px}
+button,.btn{font-family:inherit;background:#22302a;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:14px}
+button:hover{border-color:var(--acc)}
+button.pri{background:var(--acc);color:#1b1408;border-color:var(--acc);font-weight:700}
+button.rec{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+button.on{outline:2px solid var(--acc)}
+input,select,textarea{font-family:inherit;background:#0f1613;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:14px;width:100%}
+textarea{min-height:90px;resize:vertical;font-family:Amiri,serif;font-size:16px}
+input[type=checkbox]{width:auto}
+input[type=color]{padding:2px;height:34px}
+aside{display:flex;flex-direction:column;gap:10px}
+details{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+summary{cursor:pointer;font-weight:700;color:var(--acc);font-size:15px}
+.f{margin-top:8px}
+.f label{display:block;color:var(--mut);font-size:12px;margin-bottom:3px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+.chk{display:flex;gap:6px;align-items:center;margin-top:8px;color:var(--mut)}
+.meter{height:8px;background:#0b100e;border-radius:4px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3fae6a,#d9c24b,#d94545)}
+.logos{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.logos .lg{position:relative;background:#fff;border-radius:6px;padding:4px;width:70px;height:50px;display:flex;align-items:center;justify-content:center;border:2px solid transparent;cursor:pointer}
+.logos .lg.off{opacity:.3}
+.logos .lg img{max-width:100%;max-height:100%}
+.logos .lg b{position:absolute;top:-8px;left:-8px;background:var(--red);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:18px;text-align:center}
+#chapters{font-family:monospace;direction:ltr;text-align:right;min-height:140px;font-size:13px}
+.hint{color:var(--mut);font-size:12px;line-height:1.8}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22302a;border:1px solid var(--acc);padding:10px 18px;border-radius:10px;display:none;z-index:9}
+#dl a{color:var(--acc);font-weight:700}
+.pageinfo{min-width:110px;text-align:center;color:var(--mut)}
+#live{position:fixed;inset:0;background:#000;z-index:20;display:none;align-items:center;justify-content:center;touch-action:none}
+#live.on{display:flex}
+#live canvas{max-width:100vw;max-height:100vh;width:auto;height:auto;aspect-ratio:16/9}
+#liveCtl{position:fixed;bottom:0;left:0;right:0;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:8px;background:rgba(0,0,0,.72);transition:opacity .3s;z-index:21}
+#liveCtl.hide{opacity:0;pointer-events:none}
+#liveCtl button{padding:8px 10px;font-size:13px}
+#liveCtl button.active{background:var(--acc);color:#1b1408}
+@media(max-width:700px){.bar .sep{display:none}.app{padding:8px}header.top .hint{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<main>
+  <header class="top">
+    <h1>استوديو الدرس</h1>
+    <span class="hint">البثّ والتسجيل للدروس العلمية</span>
+    <span class="sp"></span>
+    <button id="btnOut" title="نافذة نظيفة لالتقاطها في OBS">🖥️ نافذة المخرج</button>
+    <button class="pri" id="btnLive">📱 وضع البث</button>
+  </header>
+
+  <div class="stage">
+    <canvas id="out" width="1920" height="1080"></canvas>
+    <div class="rec-badge" id="recBadge">● تسجيل <span id="recTime">00:00</span></div>
+  </div>
+
+  <div class="scenes" id="scenes"></div>
+
+  <div class="bar">
+    <div class="grp">
+      <button id="prev" title="الصفحة السابقة (→)">→ السابقة</button>
+      <span class="pageinfo" id="pageInfo">لا كتاب</span>
+      <button id="next" title="الصفحة التالية (←)">التالية ←</button>
+      <input id="jump" type="number" min="1" style="width:80px" placeholder="رقم">
+    </div>
+    <span class="sep"></span>
+    <div class="grp">
+      <button id="btnBar" title="شريط القراءة (B)">▤ شريط القراءة</button>
+      <button id="btnZoom" title="تكبير (Z)">🔍 تكبير</button>
+    </div>
+    <span class="sep"></span>
+    <div class="grp">
+      <button class="rec" id="btnRec">⏺ ابدأ التسجيل</button>
+      <button id="btnMark" title="علامة فصل (M)">🔖 فصل جديد</button>
+    </div>
+    <span id="dl"></span>
+  </div>
+  <p class="hint">انقر على الصفحة لنقل شريط القراءة إليها، وانقر مرتين للتكبير. الاختصارات: ١–٧ للمشاهد، ← → للصفحات، ↑ ↓ للشريط، B للشريط، Z للتكبير، M لعلامة فصل.</p>
+</main>
+
+<aside>
+  <details open>
+    <summary>بيانات الدرس</summary>
+    <div class="f"><label>عنوان الدرس</label><input data-k="title"></div>
+    <div class="f"><label>اسم الكتاب</label><input data-k="book"></div>
+    <div class="row">
+      <div class="f"><label>الصفة</label><input data-k="role"></div>
+      <div class="f" style="flex:2"><label>اسم الشيخ</label><input data-k="sheikh"></div>
+    </div>
+    <div class="f"><label>اسم القارئ</label><input data-k="reader"></div>
+    <div class="f"><label>سطر الختام (حساب القناة، الموعد القادم…)</label><input data-k="endText"></div>
+    <div class="f"><label>مدة الاستراحة (دقائق)</label><input data-k="breakMin" type="number" min="1"></div>
+  </details>
+
+  <details open>
+    <summary>الكتاب</summary>
+    <div class="f"><label>ملف PDF أو صور الصفحات</label><input type="file" id="bookFile" accept=".pdf,application/pdf,image/*" multiple></div>
+    <div class="f"><label>أو الصق نص المتن (من الشاملة مثلًا)</label><textarea id="bookText" placeholder="الصق النص هنا…"></textarea></div>
+    <button id="btnText" style="margin-top:6px;width:100%">اعرض النص صفحاتٍ</button>
+  </details>
+
+  <details open>
+    <summary>الكاميرا والصوت</summary>
+    <div class="row" style="margin-top:8px"><button class="pri" id="btnDevices">📷 تشغيل الكاميرا</button><button id="btnFlip">🔄 أمامية/خلفية</button></div>
+    <div class="f"><label>الكاميرا</label><select id="camSel"></select></div>
+    <label class="chk"><input type="checkbox" data-k="mirror"> عكس صورة الكاميرا</label>
+    <button id="btnScreen" style="width:100%;margin-top:8px">أو: شارك شاشة أو نافذة بدل الكاميرا</button>
+    <p class="hint">في البث من الهاتف عبر تطبيق PRISM لا تشغّل الميكروفون هنا، فالتطبيق يأخذ الصوت بنفسه. شغّله للتسجيل من هنا فقط.</p>
+    <button id="btnMic" style="width:100%">🎙️ تشغيل الميكروفون (للتسجيل)</button>
+    <div class="f"><label>ميكروفون الشيخ</label><select id="mic1Sel"></select></div>
+    <div class="f"><label>ميكروفون القارئ (اختياري)</label><select id="mic2Sel"></select></div>
+    <label class="chk"><input type="checkbox" id="ns" checked> إزالة الضوضاء</label>
+    <label class="chk"><input type="checkbox" id="agc" checked> موازنة مستوى الصوت تلقائيًّا</label>
+    <div class="meter"><i id="meter"></i></div>
+  </details>
+
+  <details>
+    <summary>التصميم والشعارات</summary>
+    <div class="f"><label>الطابع</label>
+      <select data-k="theme">
+        <option value="green">أخضر وذهبي</option>
+        <option value="navy">كحلي وذهبي</option>
+        <option value="maroon">عنّابي</option>
+        <option value="sand">رملي فاتح</option>
+        <option value="custom">ألوان الجهة (مخصّص)</option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="f"><label>اللون الأساسي</label><input type="color" data-k="c1"></div>
+      <div class="f"><label>لون الإبراز</label><input type="color" data-k="c2"></div>
+    </div>
+    <div class="f"><label>الشعارات (حتى ٦، انقر الشعار لإخفائه أو إظهاره)</label><input type="file" id="logoFile" accept="image/*" multiple></div>
+    <div class="logos" id="logos"></div>
+  </details>
+
+  <details>
+    <summary>التسجيل وفصول يوتيوب</summary>
+    <div class="f"><label>دقّة المخرج</label>
+      <select data-k="res"><option value="720">720p</option><option value="1080">Full HD 1080p</option><option value="2160">4K 2160p</option></select>
+    </div>
+    <label class="chk"><input type="checkbox" data-k="autoChapScene"> فصل جديد عند تغيير المشهد</label>
+    <label class="chk"><input type="checkbox" data-k="autoChapPage"> فصل جديد عند تغيير الصفحة</label>
+    <button id="btnClock" style="width:100%;margin-top:8px">ابدأ توقيت الفصول الآن (للبث عبر OBS)</button>
+    <div class="f"><label>الفصول (تُلصق في وصف الفيديو)</label><textarea id="chapters"></textarea></div>
+    <button id="btnCopy" style="width:100%;margin-top:6px">📋 نسخ الفصول</button>
+  </details>
+
+  <details>
+    <summary>طريقة البث المباشر</summary>
+    <p class="hint">
+      <b>من الهاتف (تطبيق PRISM Live Studio المجاني):</b><br>
+      ١. جهّز الكتاب والأسماء هنا وشغّل الكاميرا فقط، بلا ميكروفون.<br>
+      ٢. افتح PRISM، ثم LIVE ثم وضع Screen، واربط يوتيوب أو فيسبوك، أو أدخل رابط RTMP ومفتاحه لتيليجرام، واجعل الصوت من الميكروفون.<br>
+      ٣. اضغط Go Live، ثم ارجع إلى هنا واضغط «📱 وضع البث» وأدر الهاتف أفقيًّا.<br>
+      ٤. اسحب يمينًا ويسارًا لتقليب الصفحات، واسحب أعلى وأسفل لتحريك الشريط، والمس الشاشة لإظهار الأزرار (تختفي وحدها).<br><br>
+      <b>من الحاسوب (OBS):</b> اضغط «نافذة المخرج»، وفي OBS أضف Window Capture لها، ثم Settings ← Stream وضع مفتاح البث، ثم Start Streaming.
+    </p>
+  </details>
+</aside>
+</div>
+<div id="live"><div id="liveCtl"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const W=1920,H=1080;
+const cv=$('out'), ctx=cv.getContext('2d');
+const snap=document.createElement('canvas'), snapCtx=snap.getContext('2d');
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ---------- الإعدادات ---------- */
+let rec=null,chunks=[],clockStart=null,chapters=[],recTimer=null,outWin=null;
+const isPhone=/Android|iPhone|iPad/i.test(navigator.userAgent);
+const DEF={title:'',book:'',role:'فضيلة الشيخ',sheikh:'',reader:'',endText:'',breakMin:10,theme:'green',c1:'#1d3b5c',c2:'#d4a94e',mirror:false,res:isPhone?'720':'1080',autoChapScene:true,autoChapPage:false};
+let st=Object.assign({},DEF);
+try{Object.assign(st,JSON.parse(localStorage.getItem('studio_settings')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('studio_settings',JSON.stringify(st))}catch(e){}};
+document.querySelectorAll('[data-k]').forEach(el=>{
+  const k=el.dataset.k;
+  if(el.type==='checkbox') el.checked=!!st[k]; else el.value=st[k];
+  el.addEventListener('input',()=>{st[k]=el.type==='checkbox'?el.checked:el.value; save(); if(k==='res') applyRes();});
+});
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',3200)}
+
+/* ---------- الألوان ---------- */
+const THEMES={
+  green:{bg1:'#0e4633',bg2:'#06241a',accent:'#c9a24b',text:'#f6f0df'},
+  navy:{bg1:'#1a2f5c',bg2:'#0a1530',accent:'#d8b45a',text:'#f3f0e8'},
+  maroon:{bg1:'#661a28',bg2:'#2c0a10',accent:'#e2c47c',text:'#f7efe2'},
+  sand:{bg1:'#f2e9d5',bg2:'#d8c6a0',accent:'#7a4e1d',text:'#2b1d0e'}
+};
+function hexRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255]}
+function hexA(h,a){const[r,g,b]=hexRgb(h);return`rgba(${r},${g},${b},${a})`}
+function shade(h,f){return'#'+hexRgb(h).map(v=>Math.max(0,Math.min(255,Math.round(v*(1+f)))).toString(16).padStart(2,'0')).join('')}
+function lum(h){const[r,g,b]=hexRgb(h);return(0.299*r+0.587*g+0.114*b)/255}
+function theme(){
+  if(st.theme==='custom') return{bg1:st.c1,bg2:shade(st.c1,-0.55),accent:st.c2,text:lum(st.c1)>0.55?'#1d140a':'#f6f0df'};
+  return THEMES[st.theme]||THEMES.green;
+}
+const patCache={};
+function pattern(th){
+  const key=th.accent;
+  if(patCache[key]) return patCache[key];
+  const c=document.createElement('canvas');c.width=c.height=140;const g=c.getContext('2d');
+  g.strokeStyle=th.accent;g.globalAlpha=0.13;g.lineWidth=2;
+  const star=(cx,cy,r)=>{g.beginPath();for(let i=0;i<16;i++){const a=i*Math.PI/8-Math.PI/2,rr=i%2?r*0.62:r;g.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a))}g.closePath();g.stroke();
+    g.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4+Math.PI/8;g.lineTo(cx+r*0.42*Math.cos(a),cy+r*0.42*Math.sin(a))}g.closePath();g.stroke()};
+  [[70,70],[0,0],[140,0],[0,140],[140,140]].forEach(p=>star(p[0],p[1],46));
+  return patCache[key]=ctx.createPattern(c,'repeat');
+}
+
+/* ---------- أدوات الرسم ---------- */
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function txt(s,x,y,size,color,o={}){
+  ctx.font=`${o.w||700} ${size}px ${o.f||'Cairo'}, ${o.f==='Amiri'?'serif':'sans-serif'}`;
+  ctx.fillStyle=color;ctx.textAlign=o.a||'center';ctx.textBaseline='middle';ctx.direction='rtl';
+  ctx.fillText(s,x,y,o.max||undefined);
+}
+function measure(s,size,f='Cairo',w=700){ctx.font=`${w} ${size}px ${f}, sans-serif`;ctx.direction='rtl';return ctx.measureText(s).width}
+const ar=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ease=t=>1-Math.pow(1-t,3);
+
+function background(th){
+  const g=ctx.createRadialGradient(W/2,H/2,100,W/2,H/2,W*0.7);
+  g.addColorStop(0,th.bg1);g.addColorStop(1,th.bg2);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=pattern(th);ctx.fillRect(0,0,W,H);
+}
+function frameBorder(th){
+  ctx.strokeStyle=th.accent;ctx.lineWidth=3;ctx.strokeRect(34,34,W-68,H-68);
+  ctx.lineWidth=1.2;ctx.strokeRect(48,48,W-96,H-96);
+  [[34,34],[W-34,34],[34,H-34],[W-34,H-34]].forEach(([x,y])=>{ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillStyle=th.accent;ctx.fillRect(-12,-12,24,24);ctx.restore()});
+}
+function ornament(th,y){
+  ctx.strokeStyle=th.accent;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(W/2-300,y);ctx.lineTo(W/2-30,y);ctx.moveTo(W/2+30,y);ctx.lineTo(W/2+300,y);ctx.stroke();
+  ctx.save();ctx.translate(W/2,y);ctx.rotate(Math.PI/4);ctx.fillStyle=th.accent;ctx.fillRect(-10,-10,20,20);ctx.restore();
+}
+
+/* ---------- الكاميرا ---------- */
+const camVideo=document.createElement('video');camVideo.muted=true;camVideo.playsInline=true;
+let camStream=null;
+const camReady=()=>camVideo.readyState>=2&&camVideo.videoWidth>0;
+function drawCam(x,y,w,h,r,th,border=true){
+  ctx.save();rr(x,y,w,h,r);ctx.clip();
+  if(camReady()){
+    const vw=camVideo.videoWidth,vh=camVideo.videoHeight,s=Math.max(w/vw,h/vh),sw=w/s,sh=h/s;
+    if(st.mirror){ctx.translate(x+w,y);ctx.scale(-1,1);ctx.drawImage(camVideo,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,w,h)}
+    else ctx.drawImage(camVideo,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);
+  }else{
+    ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(x,y,w,h);
+    ctx.fillStyle=hexA(th.accent,.5);
+    const cx=x+w/2,cy=y+h/2,k=Math.min(w,h)/4;
+    ctx.beginPath();ctx.arc(cx,cy-k*0.45,k*0.5,0,7);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx,cy+k*0.85,k*0.95,k*0.6,0,Math.PI,0);ctx.fill();
+    txt('الكاميرا غير مفعّلة',cx,y+h-40,Math.max(20,w/22),th.text,{w:600});
+  }
+  ctx.restore();
+  if(border){ctx.strokeStyle=th.accent;ctx.lineWidth=4;rr(x,y,w,h,r);ctx.stroke()}
+}
+
+/* ---------- الكتاب ---------- */
+let book={type:null,doc:null,imgs:[],textPages:[],n:1,total:0};
+let pageCanvas=null, renderToken=0, lastPageRect=null;
+const barState={on:true,y:0.3,h:0.065};
+const zoom={on:false,cx:.5,cy:.5,k:2.2};
+
+async function renderPage(){
+  const tok=++renderToken;
+  if(!book.total){pageCanvas=null;updatePageInfo();return}
+  book.n=clamp(book.n,1,book.total);
+  let c=document.createElement('canvas');
+  if(book.type==='pdf'){
+    const page=await book.doc.getPage(book.n);
+    const vp1=page.getViewport({scale:1});
+    const vp=page.getViewport({scale:clamp(2000/vp1.height,1,3.5)});
+    c.width=vp.width;c.height=vp.height;
+    const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
+    await page.render({canvasContext:g,viewport:vp}).promise;
+  }else if(book.type==='img'){
+    const im=book.imgs[book.n-1];c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);
+  }else if(book.type==='text'){
+    c=drawTextPage(book.textPages[book.n-1],book.n,book.total);
+  }
+  if(tok===renderToken){pageCanvas=c;updatePageInfo()}
+}
+function updatePageInfo(){
+  $('pageInfo').textContent=book.total?`صفحة ${ar(book.n)} من ${ar(book.total)}`:'لا كتاب';
+}
+async function gotoPage(n){
+  if(!book.total)return;
+  const nn=clamp(n,1,book.total);if(nn===book.n&&pageCanvas)return;
+  book.n=nn;zoom.on=false;syncBtns();
+  await renderPage();
+  if(st.autoChapPage) addChapter(`صفحة ${book.n}`);
+}
+
+$('bookFile').addEventListener('change',async e=>{
+  const files=[...e.target.files];if(!files.length)return;
+  const pdf=files.find(f=>/pdf$/i.test(f.type)||/\.pdf$/i.test(f.name));
+  try{
+    if(pdf){
+      if(!window.pdfjsLib){toast('تعذّر تحميل قارئ PDF، تأكد من الاتصال بالإنترنت');return}
+      toast('جارٍ فتح الكتاب…');
+      const doc=await pdfjsLib.getDocument({data:await pdf.arrayBuffer()}).promise;
+      book={type:'pdf',doc,imgs:[],textPages:[],n:1,total:doc.numPages};
+      if(!st.book){st.book=pdf.name.replace(/\.pdf$/i,'');document.querySelector('[data-k=book]').value=st.book;save()}
+    }else{
+      const imgs=await Promise.all(files.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(f=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(f)})));
+      book={type:'img',doc:null,imgs,textPages:[],n:1,total:imgs.length};
+    }
+    await renderPage();toast('تم فتح الكتاب');
+  }catch(err){console.error(err);toast('تعذّر فتح الملف')}
+});
+
+/* نصّ المتن إلى صفحات */
+const TP={w:1400,h:2000,m:120,size:54,lh:100};
+function wrapText(text){
+  const g=document.createElement('canvas').getContext('2d');
+  g.font=`400 ${TP.size}px Amiri, serif`;g.direction='rtl';
+  const maxW=TP.w-TP.m*2,lines=[];
+  text.replace(/\r/g,'').split('\n').forEach(par=>{
+    par=par.trim();if(!par){lines.push('');return}
+    let line='';
+    par.split(/\s+/).forEach(w=>{const t=line?line+' '+w:w;if(g.measureText(t).width>maxW&&line){lines.push(line);line=w}else line=t});
+    if(line)lines.push(line);
+  });
+  const per=Math.floor((TP.h-TP.m*2-80)/TP.lh),pages=[];
+  for(let i=0;i<lines.length;i+=per)pages.push(lines.slice(i,i+per));
+  return pages.length?pages:[[]];
+}
+function drawTextPage(lines,n,total){
+  const c=document.createElement('canvas');c.width=TP.w;c.height=TP.h;const g=c.getContext('2d');
+  g.fillStyle='#fdfaf2';g.fillRect(0,0,TP.w,TP.h);
+  g.strokeStyle='#b89a5a';g.lineWidth=3;g.strokeRect(40,40,TP.w-80,TP.h-80);g.lineWidth=1;g.strokeRect(54,54,TP.w-108,TP.h-108);
+  g.direction='rtl';g.textBaseline='middle';
+  g.fillStyle='#8a6a2a';g.font='700 34px Amiri, serif';g.textAlign='center';
+  g.fillText(st.book||'',TP.w/2,TP.m-20);
+  g.fillStyle='#1d160c';g.font=`400 ${TP.size}px Amiri, serif`;g.textAlign='right';
+  lines.forEach((l,i)=>g.fillText(l,TP.w-TP.m,TP.m+60+i*TP.lh+TP.lh/2));
+  g.fillStyle='#8a6a2a';g.font='700 32px Amiri, serif';g.textAlign='center';
+  g.fillText(ar(n),TP.w/2,TP.h-TP.m+50);
+  return c;
+}
+$('btnText').addEventListener('click',async()=>{
+  const t=$('bookText').value.trim();if(!t){toast('الصق النص أولًا');return}
+  try{await document.fonts.load(`400 ${TP.size}px Amiri`)}catch(e){}
+  const pages=wrapText(t);
+  book={type:'text',doc:null,imgs:[],textPages:pages,n:1,total:pages.length};
+  await renderPage();toast(`صار النص ${ar(pages.length)} صفحة`);
+});
+
+function drawPage(x,y,w,h,th){
+  if(!pageCanvas){
+    ctx.fillStyle='rgba(255,255,255,.06)';rr(x,y,w,h,18);ctx.fill();
+    ctx.setLineDash([14,10]);ctx.strokeStyle=hexA(th.accent,.6);ctx.lineWidth=3;rr(x,y,w,h,18);ctx.stroke();ctx.setLineDash([]);
+    txt('اختر ملف الكتاب أو الصق نصّه من اللوحة الجانبية',x+w/2,y+h/2,34,th.text,{w:600,max:w-60});
+    lastPageRect=null;return;
+  }
+  const pw=pageCanvas.width,ph=pageCanvas.height,s=Math.min(w/pw,h/ph),dw=pw*s,dh=ph*s,dx=x+(w-dw)/2,dy=y+(h-dh)/2;
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.45)';ctx.shadowBlur=40;ctx.shadowOffsetY=12;ctx.fillStyle='#fff';ctx.fillRect(dx,dy,dw,dh);ctx.restore();
+  if(zoom.on){
+    const zw=pw/zoom.k,zh=ph/zoom.k,sx=clamp(zoom.cx*pw-zw/2,0,pw-zw),sy=clamp(zoom.cy*ph-zh/2,0,ph-zh);
+    ctx.drawImage(pageCanvas,sx,sy,zw,zh,dx,dy,dw,dh);
+    txt('🔍',dx+40,dy+40,34,'#000');
+  }else{
+    ctx.drawImage(pageCanvas,dx,dy,dw,dh);
+    if(barState.on){
+      const by=dy+barState.y*dh,bh=barState.h*dh;
+      ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(dx,dy,dw,Math.max(0,by-dy));ctx.fillRect(dx,by+bh,dw,Math.max(0,dy+dh-by-bh));
+      ctx.fillStyle=hexA(th.accent,.16);ctx.fillRect(dx,by,dw,bh);
+      ctx.fillStyle=th.accent;ctx.fillRect(dx,by-2,dw,4);ctx.fillRect(dx,by+bh-2,dw,4);
+      ctx.beginPath();ctx.moveTo(dx+dw+4,by+bh/2);ctx.lineTo(dx+dw+26,by+bh/2-14);ctx.lineTo(dx+dw+26,by+bh/2+14);ctx.closePath();ctx.fill();
+    }
+  }
+  lastPageRect={x:dx,y:dy,w:dw,h:dh};
+}
+
+/* ---------- الشعارات ---------- */
+let logos=[];
+$('logoFile').addEventListener('change',e=>{
+  [...e.target.files].forEach(f=>{if(logos.length>=6)return;const i=new Image();i.src=URL.createObjectURL(f);logos.push({img:i,on:true})});
+  if(e.target.files.length+logos.length>6)toast('الحد الأقصى ستة شعارات');
+  e.target.value='';renderLogos();
+});
+function renderLogos(){
+  const box=$('logos');box.innerHTML='';
+  logos.forEach((l,i)=>{const d=document.createElement('div');d.className='lg'+(l.on?'':' off');d.title='انقر للإخفاء أو الإظهار';
+    d.appendChild(l.img.cloneNode());const x=document.createElement('b');x.textContent='×';x.onclick=ev=>{ev.stopPropagation();logos.splice(i,1);renderLogos()};d.appendChild(x);
+    d.onclick=()=>{l.on=!l.on;renderLogos()};box.appendChild(d)});
+}
+function drawLogos(center){
+  const act=logos.filter(l=>l.on&&l.img.complete&&l.img.naturalWidth);if(!act.length)return;
+  const hh=center?110:80,gap=22;
+  const ws=act.map(l=>Math.min(hh*l.img.naturalWidth/l.img.naturalHeight,hh*2.6));
+  const tot=ws.reduce((a,b)=>a+b,0)+gap*(act.length-1);
+  let x=center?(W-tot)/2:60;const y=center?90:46;
+  act.forEach((l,i)=>{ctx.save();ctx.shadowColor='rgba(0,0,0,.4)';ctx.shadowBlur=12;ctx.drawImage(l.img,x,y,ws[i],hh);ctx.restore();x+=ws[i]+gap});
+}
+
+/* ---------- العناصر النصية ---------- */
+function lowerThird(role,name,right,bottom,k,th){
+  if(!name)return;
+  const p=ease(clamp((now-sceneStart-250)/700,0,1));
+  const nw=measure(name,64*k,'Amiri'),rw=role?measure(role,32*k,'Cairo',600):0;
+  const w=Math.max(nw,rw)+100*k,h=(role?160:120)*k;
+  const x=right-w+(1-p)*(w+60),y=bottom-h;
+  ctx.save();ctx.globalAlpha=p;
+  ctx.shadowColor='rgba(0,0,0,.4)';ctx.shadowBlur=24;
+  ctx.fillStyle=hexA(th.bg2,.93);rr(x,y,w,h,14*k);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle=th.accent;ctx.fillRect(x+w-14*k,y,14*k,h);
+  if(role){txt(role,x+w-46*k,y+h*0.30,32*k,th.accent,{a:'right',w:600});txt(name,x+w-46*k,y+h*0.68,64*k,th.text,{a:'right',f:'Amiri'})}
+  else txt(name,x+w-46*k,y+h*0.52,64*k,th.text,{a:'right',f:'Amiri'});
+  ctx.restore();
+}
+function header(th){
+  const s=[st.title,st.book].filter(Boolean).join(' — ');if(!s)return;
+  const w=Math.min(measure(s,36)+80,W*0.6),x=W-50-w,y=40;
+  ctx.fillStyle=hexA(th.bg2,.88);rr(x,y,w,70,35);ctx.fill();ctx.strokeStyle=th.accent;ctx.lineWidth=2;rr(x,y,w,70,35);ctx.stroke();
+  txt(s,x+w/2,y+37,36,th.text,{max:w-60});
+}
+function pageBadge(x,y,th){
+  if(!book.total)return;const s=`صفحة ${ar(book.n)}`;const w=measure(s,30)+50;
+  ctx.fillStyle=hexA(th.bg2,.9);rr(x-w/2,y,w,56,28);ctx.fill();txt(s,x,y+30,30,th.accent);
+}
+function nameCard(label,name,x,y,w,th){
+  if(!name)return;ctx.fillStyle=hexA(th.bg2,.9);rr(x,y,w,120,14);ctx.fill();
+  ctx.fillStyle=th.accent;ctx.fillRect(x+w-10,y,10,120);
+  txt(label,x+w-34,y+36,28,th.accent,{a:'right',w:600});txt(name,x+w-34,y+82,48,th.text,{a:'right',f:'Amiri',max:w-60});
+}
+
+/* ---------- المشاهد ---------- */
+const SCENES=[['pre','قبل البث'],['speaker','الشيخ'],['book','الكتاب مع الشيخ'],['page','الصفحة كاملة'],['reader','القارئ'],['break','استراحة'],['end','الختام']];
+let scene='pre',sceneStart=performance.now(),fadeStart=-1e9,now=performance.now();
+const sc=$('scenes');
+SCENES.forEach(([id,label],i)=>{const b=document.createElement('button');b.dataset.s=id;b.innerHTML=`${label}<kbd>${ar(i+1)}</kbd>`;b.onclick=()=>setScene(id);sc.appendChild(b)});
+function setScene(id){
+  if(id===scene)return;
+  snap.width=cv.width;snap.height=cv.height;snapCtx.drawImage(cv,0,0);fadeStart=performance.now();
+  scene=id;sceneStart=performance.now();
+  sc.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.s===id));
+  if(st.autoChapScene&&!['pre','break','end'].includes(id))addChapter(SCENES.find(s=>s[0]===id)[1]+(book.total?` (صفحة ${book.n})`:''));
+}
+sc.querySelector('[data-s=pre]').classList.add('active');
+
+function draw(){
+  now=performance.now();
+  const th=theme(),K=cv.height/H;
+  ctx.setTransform(K,0,0,K,0,0);ctx.globalAlpha=1;
+  background(th);
+  switch(scene){
+    case 'pre':{
+      frameBorder(th);drawLogos(true);
+      txt(st.title||'عنوان الدرس',W/2,400,100,th.accent,{f:'Amiri',max:W-300});
+      if(st.book)txt(st.book,W/2,520,56,th.text,{f:'Amiri',max:W-300});
+      ornament(th,600);
+      if(st.sheikh)txt(`يلقيه ${st.role?st.role+' ':''}${st.sheikh}`,W/2,690,52,th.text,{f:'Amiri',max:W-300});
+      const pulse=0.6+0.4*Math.sin(now/500);
+      ctx.globalAlpha=pulse;txt('يبدأ البث بعد قليل بإذن الله',W/2,830,44,th.accent,{w:600});ctx.globalAlpha=1;
+      const d=new Date();txt(ar(d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')),W/2,930,40,th.text,{w:400});
+      break;}
+    case 'speaker':
+      drawCam(0,0,W,H,0,th,false);header(th);drawLogos(false);
+      lowerThird(st.role,st.sheikh,W-80,H-80,1,th);break;
+    case 'book':
+      header(th);drawLogos(false);
+      drawPage(780,140,1090,900,th);
+      drawCam(60,180,680,760,24,th);
+      lowerThird(st.role,st.sheikh,720,910,0.72,th);
+      break;
+    case 'page':
+      drawPage(320,40,1560,1000,th);
+      drawCam(40,H-40-270,480,270,18,th);
+      pageBadge(280,60,th);drawLogos(false);
+      break;
+    case 'reader':
+      drawLogos(false);
+      drawPage(660,40,1220,1000,th);
+      drawCam(40,150,580,326,18,th);
+      nameCard('القارئ',st.reader,40,520,580,th);
+      nameCard(st.role||'الشيخ',st.sheikh,40,665,580,th);
+      pageBadge(330,H-110,th);
+      break;
+    case 'break':{
+      frameBorder(th);drawLogos(true);
+      txt('استراحة قصيرة',W/2,430,110,th.accent,{f:'Amiri'});ornament(th,540);
+      txt('نعود إليكم بعد قليل بإذن الله',W/2,630,50,th.text,{f:'Amiri'});
+      const rem=Math.max(0,(+st.breakMin||0)*60-(now-sceneStart)/1000);
+      if(rem>0)txt(ar(Math.floor(rem/60).toString().padStart(2,'0')+':'+Math.floor(rem%60).toString().padStart(2,'0')),W/2,790,90,th.text,{w:600});
+      break;}
+    case 'end':
+      frameBorder(th);drawLogos(true);
+      txt('جزاكم الله خيرًا',W/2,400,120,th.accent,{f:'Amiri'});ornament(th,520);
+      if(st.title)txt(`انتهى ${st.title}`,W/2,610,54,th.text,{f:'Amiri',max:W-300});
+      if(st.sheikh)txt(`${st.role?st.role+' ':''}${st.sheikh}`,W/2,700,46,th.text,{f:'Amiri'});
+      if(st.endText)txt(st.endText,W/2,840,42,th.accent,{w:600,max:W-300});
+      break;
+  }
+  const fp=(now-fadeStart)/450;
+  if(fp<1){ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1-ease(fp);ctx.drawImage(snap,0,0);ctx.globalAlpha=1}
+  updateMeter();
+  if(outWin&&!outWin.closed)outWin._paint&&outWin._paint();
+}
+function applyRes(){const r=+st.res||1080;if(rec&&rec.state==='recording'){toast('لا تُغيَّر الدقة أثناء التسجيل');return}cv.height=r;cv.width=Math.round(r*16/9)}
+applyRes();
+
+/* مؤقّت لا يتوقف في الخلفية */
+const tick=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),33)'],{type:'text/javascript'})));
+tick.onmessage=draw;
+
+/* ---------- الصوت ---------- */
+let ac=null,mix=null,comp=null,analyser=null,mics=[null,null];
+function ensureAudio(){
+  if(ac)return;ac=new AudioContext();mix=ac.createMediaStreamDestination();
+  comp=ac.createDynamicsCompressor();comp.threshold.value=-24;comp.ratio.value=4;comp.attack.value=0.005;comp.release.value=0.25;
+  analyser=ac.createAnalyser();analyser.fftSize=1024;comp.connect(mix);comp.connect(analyser);
+}
+async function startMic(slot,id){
+  ensureAudio();
+  if(mics[slot]){mics[slot].stream.getTracks().forEach(t=>t.stop());mics[slot].src.disconnect();mics[slot]=null}
+  if(!id)return;
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({audio:{deviceId:{exact:id},noiseSuppression:$('ns').checked,autoGainControl:$('agc').checked,echoCancellation:false}});
+    const src=ac.createMediaStreamSource(s);src.connect(comp);mics[slot]={stream:s,src};
+  }catch(e){toast('تعذّر تشغيل الميكروفون')}
+}
+const tbuf=new Uint8Array(1024);
+function updateMeter(){
+  if(!analyser)return;analyser.getByteTimeDomainData(tbuf);let s=0;for(let i=0;i<tbuf.length;i++){const v=(tbuf[i]-128)/128;s+=v*v}
+  $('meter').style.width=Math.min(100,Math.sqrt(s/tbuf.length)*400)+'%';
+}
+
+/* ---------- الأجهزة ---------- */
+async function startCam(id){
+  if(camStream)camStream.getTracks().forEach(t=>t.stop());
+  if(!id)return;
+  try{camStream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:id},width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30}}});camVideo.srcObject=camStream;await camVideo.play()}
+  catch(e){toast('تعذّر تشغيل الكاميرا')}
+}
+let facing='user';
+async function listDevices(){
+  const devs=await navigator.mediaDevices.enumerateDevices();
+  const fill=(sel,kind)=>{const v=sel.value;sel.innerHTML='<option value="">— بدون —</option>'+devs.filter(d=>d.kind===kind).map((d,i)=>`<option value="${d.deviceId}">${d.label||(kind==='videoinput'?'كاميرا ':'ميكروفون ')+(i+1)}</option>`).join('');sel.value=v};
+  fill($('camSel'),'videoinput');fill($('mic1Sel'),'audioinput');fill($('mic2Sel'),'audioinput');
+  return devs;
+}
+async function camByFacing(){
+  if(camStream)camStream.getTracks().forEach(t=>t.stop());
+  camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30}},audio:false});
+  camVideo.srcObject=camStream;await camVideo.play();
+  st.mirror=facing==='user';document.querySelector('[data-k=mirror]').checked=st.mirror;save();
+}
+$('btnDevices').addEventListener('click',async()=>{
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('الكاميرا تحتاج رابط https وChrome أو Safari');return}
+  try{await camByFacing()}catch(e){toast('لم يُسمح بالوصول إلى الكاميرا');return}
+  await listDevices();const id=camStream.getVideoTracks()[0].getSettings().deviceId;if(id)$('camSel').value=id;
+  $('btnDevices').textContent='✓ الكاميرا تعمل';
+});
+$('btnFlip').addEventListener('click',async()=>{facing=facing==='user'?'environment':'user';try{await camByFacing();$('camSel').value=''}catch(e){toast('تعذّر تبديل الكاميرا')}});
+$('btnMic').addEventListener('click',async()=>{
+  try{const t=await navigator.mediaDevices.getUserMedia({audio:true});t.getTracks().forEach(x=>x.stop())}catch(e){toast('لم يُسمح بالوصول إلى الميكروفون');return}
+  ensureAudio();if(ac.state==='suspended')ac.resume();
+  const devs=await listDevices();const m=devs.find(d=>d.kind==='audioinput');
+  if(m){$('mic1Sel').value=m.deviceId;await startMic(0,m.deviceId)}
+  $('btnMic').textContent='✓ الميكروفون يعمل';
+});
+$('camSel').onchange=e=>startCam(e.target.value);
+$('mic1Sel').onchange=e=>startMic(0,e.target.value);
+$('mic2Sel').onchange=e=>startMic(1,e.target.value);
+['ns','agc'].forEach(id=>$(id).onchange=()=>{startMic(0,$('mic1Sel').value);startMic(1,$('mic2Sel').value)});
+$('btnScreen').addEventListener('click',async()=>{
+  try{const s=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:false});
+    if(camStream)camStream.getTracks().forEach(t=>t.stop());camStream=s;camVideo.srcObject=s;await camVideo.play();$('camSel').value=''}
+  catch(e){toast('أُلغيت مشاركة الشاشة')}
+});
+
+/* ---------- التسجيل والفصول ---------- */
+function fmt(sec){sec=Math.max(0,Math.floor(sec));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60,p=n=>String(n).padStart(2,'0');return h?`${h}:${p(m)}:${p(s)}`:`${p(m)}:${p(s)}`}
+function renderChapters(){$('chapters').value=chapters.map(c=>`${fmt(c.t)} ${c.label}`).join('\n')}
+function addChapter(label){
+  if(clockStart===null)return;
+  const t=(performance.now()-clockStart)/1000,last=chapters[chapters.length-1];
+  if(last&&t-last.t<10)last.label=label;else chapters.push({t,label});
+  renderChapters();
+}
+function startClock(){clockStart=performance.now();chapters=[{t:0,label:'البداية'}];renderChapters()}
+$('btnClock').onclick=()=>{startClock();toast('بدأ توقيت الفصول من الآن')};
+$('btnMark').onclick=()=>{if(clockStart===null){toast('ابدأ التسجيل أو توقيت الفصول أولًا');return}addChapter(book.total?`صفحة ${book.n}`:'فصل '+(chapters.length+1))};
+$('btnCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('chapters').value);toast('نُسخت الفصول')}catch(e){$('chapters').select();toast('حدّد النص وانسخه يدويًّا')}};
+
+$('btnRec').addEventListener('click',()=>{
+  if(rec&&rec.state==='recording'){rec.stop();return}
+  const vs=cv.captureStream(30),tracks=[...vs.getVideoTracks()];
+  if(mix)tracks.push(...mix.stream.getAudioTracks());
+  if(!mix||!mics.some(Boolean))toast('تنبيه: لا ميكروفون مفعّل، سيُسجَّل بلا صوت');
+  const types=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  const mime=types.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+  if(!mime){toast('المتصفح لا يدعم التسجيل؛ استعمل Chrome');return}
+  const bps={720:5e6,1080:9e6,2160:30e6}[cv.height]||9e6;
+  rec=new MediaRecorder(new MediaStream(tracks),{mimeType:mime,videoBitsPerSecond:bps,audioBitsPerSecond:192000});
+  chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+  rec.onstop=()=>{
+    clearInterval(recTimer);if(!live.classList.contains('on'))keepAwake(false);else buildCtl();$('recBadge').classList.remove('on');$('btnRec').textContent='⏺ ابدأ التسجيل';
+    const ext=mime.startsWith('video/mp4')?'mp4':'webm',blob=new Blob(chunks,{type:mime.split(';')[0]});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    const d=new Date();a.download=`${(st.title||'درس').replace(/[\\/:*?"<>|]/g,'')}-${d.toISOString().slice(0,10)}.${ext}`;
+    a.textContent=`⬇ تنزيل التسجيل (${(blob.size/1048576).toFixed(0)} م.ب)`;
+    $('dl').innerHTML='';$('dl').appendChild(a);a.click();
+  };
+  rec.start(1000);startClock();keepAwake(true);if(live.classList.contains('on'))buildCtl();
+  $('recBadge').classList.add('on');$('btnRec').textContent='⏹ إيقاف التسجيل';$('dl').innerHTML='';
+  recTimer=setInterval(()=>$('recTime').textContent=fmt((performance.now()-clockStart)/1000),500);
+});
+window.addEventListener('beforeunload',e=>{if(rec&&rec.state==='recording'){e.preventDefault();e.returnValue=''}});
+
+/* ---------- نافذة المخرج ---------- */
+$('btnOut').addEventListener('click',()=>{
+  if(outWin&&!outWin.closed){outWin.focus();return}
+  outWin=window.open('','studio_out','width=1280,height=720');
+  if(!outWin){toast('اسمح بالنوافذ المنبثقة لهذه الصفحة');return}
+  outWin.document.write('<!DOCTYPE html><html><head><title>مخرج البث</title><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{width:100%;height:100%;object-fit:contain;display:block}</style></head><body><canvas></canvas></body></html>');
+  outWin.document.close();
+  const oc=outWin.document.querySelector('canvas'),og=oc.getContext('2d');
+  outWin._paint=()=>{if(oc.width!==cv.width){oc.width=cv.width;oc.height=cv.height}og.drawImage(cv,0,0)};
+  oc.ondblclick=()=>oc.requestFullscreen&&oc.requestFullscreen();
+});
+/* ---------- وضع البث (ملء الشاشة للهاتف) ---------- */
+let wake=null,hideT=null;
+async function keepAwake(on){try{if(on&&navigator.wakeLock&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>wake=null)}else if(!on&&wake){await wake.release();wake=null}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&($('live').classList.contains('on')||(rec&&rec.state==='recording')))keepAwake(true)});
+const live=$('live'),ctl=$('liveCtl'),stageBox=document.querySelector('.stage');
+function buildCtl(){
+  ctl.innerHTML='';
+  const add=(label,fn,cls)=>{const b=document.createElement('button');b.textContent=label;if(cls)b.className=cls;b.onclick=e=>{e.stopPropagation();fn();buildCtl();showCtl()};ctl.appendChild(b);return b};
+  SCENES.forEach(([id,l])=>{const b=add(l,()=>setScene(id));if(id===scene)b.classList.add('active')});
+  add('→',()=>gotoPage(book.n-1));add('←',()=>gotoPage(book.n+1));
+  add(barState.on?'▤ إخفاء الشريط':'▤ الشريط',()=>{barState.on=!barState.on;syncBtns()});
+  add(rec&&rec.state==='recording'?'⏹ إيقاف':'⏺ تسجيل',()=>$('btnRec').click(),'rec');
+  add('✕ خروج',exitLive);
+}
+function showCtl(){ctl.classList.remove('hide');clearTimeout(hideT);hideT=setTimeout(()=>ctl.classList.add('hide'),3500)}
+async function enterLive(){
+  live.insertBefore(cv,ctl);live.classList.add('on');buildCtl();showCtl();
+  try{await live.requestFullscreen({navigationUI:'hide'})}catch(e){}
+  try{await screen.orientation.lock('landscape')}catch(e){}
+  keepAwake(true);
+}
+async function exitLive(){
+  stageBox.insertBefore(cv,stageBox.firstChild);live.classList.remove('on');
+  try{if(document.fullscreenElement)await document.exitFullscreen()}catch(e){}
+  try{screen.orientation.unlock()}catch(e){}
+  if(!(rec&&rec.state==='recording'))keepAwake(false);
+}
+$('btnLive').onclick=enterLive;
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&live.classList.contains('on'))exitLive()});
+/* السحب لتقليب الصفحات */
+let tx=null,ty=null;
+cv.addEventListener('touchstart',e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY},{passive:true});
+cv.addEventListener('touchend',e=>{
+  if(tx===null)return;const t=e.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;tx=null;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){gotoPage(book.n+(dx>0?1:-1));e.preventDefault()}
+  else if(Math.abs(dy)>60&&Math.abs(dy)>Math.abs(dx)*1.5&&lastPageRect){barState.y=clamp(barState.y+(dy>0?barState.h:-barState.h),0,1-barState.h);e.preventDefault()}
+});
+live.addEventListener('click',e=>{if(e.target===live)showCtl()});
+cv.addEventListener('click',()=>{if(live.classList.contains('on'))showCtl()});
+
+/* ---------- التحكم ---------- */
+function syncBtns(){$('btnBar').classList.toggle('on',barState.on);$('btnZoom').classList.toggle('on',zoom.on)}
+syncBtns();
+$('next').onclick=()=>gotoPage(book.n+1);
+$('prev').onclick=()=>gotoPage(book.n-1);
+$('jump').onchange=e=>{gotoPage(+e.target.value);e.target.value=''};
+$('btnBar').onclick=()=>{barState.on=!barState.on;syncBtns()};
+$('btnZoom').onclick=()=>{zoom.on=!zoom.on;if(zoom.on){zoom.cx=.5;zoom.cy=barState.y+barState.h/2}syncBtns()};
+function toPage(e){
+  const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H,p=lastPageRect;
+  if(!p||x<p.x||x>p.x+p.w||y<p.y||y>p.y+p.h)return null;
+  return{u:(x-p.x)/p.w,v:(y-p.y)/p.h};
+}
+cv.addEventListener('click',e=>{const q=toPage(e);if(!q)return;if(zoom.on){zoom.on=false;syncBtns();return}barState.y=clamp(q.v-barState.h/2,0,1-barState.h);barState.on=true;syncBtns()});
+cv.addEventListener('dblclick',e=>{const q=toPage(e);if(!q)return;zoom.on=true;zoom.cx=q.u;zoom.cy=q.v;syncBtns()});
+cv.addEventListener('wheel',e=>{if(!toPage(e))return;e.preventDefault();if(e.ctrlKey||e.altKey){barState.h=clamp(barState.h+(e.deltaY>0?-0.005:0.005),0.025,0.25)}else barState.y=clamp(barState.y+(e.deltaY>0?0.012:-0.012),0,1-barState.h)},{passive:false});
+document.addEventListener('keydown',e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+  const k=e.key;
+  if(k>='1'&&k<='7'){setScene(SCENES[+k-1][0]);return}
+  if(k==='ArrowLeft'||k==='PageDown'){gotoPage(book.n+1);e.preventDefault()}
+  else if(k==='ArrowRight'||k==='PageUp'){gotoPage(book.n-1);e.preventDefault()}
+  else if(k==='ArrowDown'){barState.y=clamp(barState.y+barState.h,0,1-barState.h);e.preventDefault()}
+  else if(k==='ArrowUp'){barState.y=clamp(barState.y-barState.h,0,1-barState.h);e.preventDefault()}
+  else if(k==='b'||k==='B'||k==='لا'){$('btnBar').click()}
+  else if(k==='z'||k==='Z'||k==='ئ'){$('btnZoom').click()}
+  else if(k==='m'||k==='M'||k==='ة'){$('btnMark').click()}
+});
+document.fonts&&document.fonts.ready.then(()=>{if(book.type==='text')renderPage()});
+</script>
+</body>
+</html>
